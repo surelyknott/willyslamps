@@ -123,9 +123,9 @@ function flickerLight() {
     onInterrupt: resetIntensity
   })
     .set(lamp, { '--lamp-intensity': 1 })
-    .to(lamp, { '--lamp-intensity': .28, duration: .055 })
+    .to(lamp, { '--lamp-intensity': .18, duration: 0.05 })
     .to(lamp, { '--lamp-intensity': 1, duration: .10 })
-    .to(lamp, { '--lamp-intensity': .55, duration: .075 }, '+=.09')
+    .to(lamp, { '--lamp-intensity': .45, duration: .075 }, '+=.09')
     .to(lamp, { '--lamp-intensity': 1, duration: .18 });
 }
 
