@@ -111,22 +111,26 @@ function render() {
 
 function flickerLight() {
   const lamp = document.body;
-  const resetIntensity = () => {
+  const resetFlicker = () => {
     lamp.style.removeProperty('--lamp-intensity');
+    lamp.style.removeProperty('--blackout-opacity');
     flickerTween = null;
   };
 
   flickerTween = gsap.timeline({
     delay: .45,
     defaults: { ease: 'none' },
-    onComplete: resetIntensity,
-    onInterrupt: resetIntensity
+    onComplete: resetFlicker,
+    onInterrupt: resetFlicker
   })
     .set(lamp, { '--lamp-intensity': 1 })
     .to(lamp, { '--lamp-intensity': .18, duration: 0.05 })
     .to(lamp, { '--lamp-intensity': 1, duration: .10 })
     .to(lamp, { '--lamp-intensity': .45, duration: .075 }, '+=.09')
-    .to(lamp, { '--lamp-intensity': 1, duration: .18 });
+    .to(lamp, { '--lamp-intensity': 1, duration: .18 })
+    .set(lamp, { '--blackout-opacity': 1 })
+    .call(() => lamp.classList.toggle('cat-revealed'), [], '+=.85')
+    .to(lamp, { '--blackout-opacity': 0, duration: .8, ease: 'power2.out' });
 }
 
 function toggleLight() {

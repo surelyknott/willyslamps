@@ -45,16 +45,27 @@ body.lit {
   padding: 45px 16px 30px;
 }
 
+.scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: #000;
+  opacity: var(--blackout-opacity, 0);
+  pointer-events: none;
+}
+
 .brand-art {
   width: min(1050px, 95vw);
   position: relative;
   z-index: 1;
 }
 
-/* Directional light and lettering shadow */
+/* Artwork layers */
 
 .lamp-light,
-.letter-shadow {
+.letter-shadow,
+.cat-art {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -63,12 +74,43 @@ body.lit {
   z-index: -1;
   pointer-events: none;
   opacity: 0;
+}
+
+.lamp-light,
+.letter-shadow {
   transition: opacity .8s ease;
 }
 
 body.lit .lamp-light,
 body.lit .letter-shadow {
   opacity: 1;
+}
+
+body.cat-revealed .cat-art {
+  z-index: 1;
+  opacity: 1;
+}
+
+.cat-eyelids {
+  transform-box: fill-box;
+  transform-origin: top;
+  transform: scaleY(0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body.cat-revealed .cat-eyelids {
+    animation: cat-blink 4.2s ease-in-out .9s infinite;
+  }
+}
+
+@keyframes cat-blink {
+  0%, 4.5%, 7%, 11.5%, 100% {
+    transform: scaleY(0);
+  }
+
+  2%, 2.5%, 9%, 9.5% {
+    transform: scaleY(1);
+  }
 }
 
 /* Logo and pull chain */
