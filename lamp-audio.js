@@ -8,10 +8,13 @@
   const HANDOFF_SECONDS = .12;
   const STARTUP_FILE = './audio-fx/lamp-startup.mp3';
   const HUM_FILE = './audio-fx/lamp-hum.mp3';
+  // Seconds into the startup recording, at the peaks of the warm-up bursts.
+  const WARMUP_CUES = [6.00, 9.16];
 
   const buffers = new Map();
   const startupBytes = fetchAudio(STARTUP_FILE).catch(() => null);
   let context;
+  let resumeRequest;
   let lampPlayback = null;
   let availableAt = 0;
 
@@ -48,8 +51,14 @@
 
   function unlockAudio() {
     if (context && context.state !== 'running') {
-      return context.resume().catch(() => {});
+      resumeRequest = context.resume().catch(() => {});
     }
+    return resumeRequest;
+  }
+
+  function unlockFromGesture() {
+    prepareContext();
+    unlockAudio();
   }
 
   function playBuffer(playback, buffer, level, at, loop = false) {
@@ -71,10 +80,26 @@
     return gain.gain;
   }
 
+  function animateWarmup(playback) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const lamp = document.body;
+    const dipTime = .06;
+    playback.warmup = gsap.timeline({
+      delay: Math.max(0, playback.startAt - context.currentTime),
+      onComplete: () => lamp.style.removeProperty('--lamp-warmup-intensity')
+    }).set(lamp, { '--lamp-warmup-intensity': 1 });
+    for (const cue of WARMUP_CUES) {
+      playback.warmup
+        .to(lamp, { '--lamp-warmup-intensity': .7, duration: dipTime }, cue - dipTime)
+        .to(lamp, { '--lamp-warmup-intensity': 1, duration: .16 }, cue);
+    }
+  }
+
   async function startAudio(playback) {
     prepareContext();
     if (!context) return;
-    const audioReady = unlockAudio();
+    const audioReady = resumeRequest ?? unlockAudio();
 
     const startupReady = loadBuffer(STARTUP_FILE);
     const humReady = loadBuffer(HUM_FILE);
@@ -86,6 +111,7 @@
     playback.output = context.createGain();
     playback.output.connect(context.destination);
     const startupLevel = playBuffer(playback, startup, LAMP_STARTUP_VOLUME, playback.startAt);
+    animateWarmup(playback);
 
     const hum = await humReady;
     if (!hum || lampPlayback !== playback) return;
@@ -102,6 +128,10 @@
   }
 
   function stopAudio(playback) {
+    if (playback.warmup) {
+      playback.warmup.kill();
+      document.body.style.removeProperty('--lamp-warmup-intensity');
+    }
     if (!playback.sources.size) {
       playback.output?.disconnect();
       return;
@@ -123,12 +153,16 @@
   }
 
   // The button's animated tug finishes after the original click gesture.
-  document.querySelector('#toggle').addEventListener('click', unlockAudio);
+  document.querySelector('#toggle').addEventListener('click', unlockFromGesture);
+  const cord = document.querySelector('#chain-hit');
+  cord.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'mouse') unlockFromGesture();
+  });
+  cord.addEventListener('touchend', unlockFromGesture, { passive: true });
   window.addEventListener('lampchange', ({ detail: lit }) => {
     const previous = lampPlayback;
     const next = lit ? { sources: new Set(), output: null, startAt: Infinity } : null;
     lampPlayback = next;
-    if (lit) unlockAudio();
 
     // Let the theme update paint before starting or stopping the audio graph.
     requestAnimationFrame(() => setTimeout(() => {

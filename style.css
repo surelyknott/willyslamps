@@ -127,7 +127,7 @@ body.cat-revealed .cat-art {
 
 body.lit #logo {
   filter: invert(1.0);
-  opacity: var(--lamp-intensity, 1);
+  opacity: calc(var(--lamp-intensity, 1) * var(--lamp-warmup-intensity, 1));
 }
 
 #Knob,
@@ -177,7 +177,7 @@ body.lit .halo {
 body.lit .lamp-light,
 body.lit .letter-shadow,
 body.lit .halo {
-  filter: opacity(var(--lamp-intensity, 1));
+  filter: opacity(calc(var(--lamp-intensity, 1) * var(--lamp-warmup-intensity, 1)));
 }
 
 /* Controls */
