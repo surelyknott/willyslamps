@@ -13,10 +13,12 @@
 
   const buffers = new Map();
   const startupBytes = fetchAudio(STARTUP_FILE).catch(() => null);
+  const enableSound = document.querySelector('#enable-sound');
   let context;
   let resumeRequest;
   let lampPlayback = null;
   let availableAt = 0;
+  let soundPrompt;
 
   async function fetchAudio(file) {
     const response = await fetch(file);
@@ -105,7 +107,9 @@
     const humReady = loadBuffer(HUM_FILE);
     const startup = await startupReady;
     await audioReady;
-    if (!startup || lampPlayback !== playback || context.state !== 'running') return;
+    if (lampPlayback !== playback || context.state !== 'running') return;
+    enableSound.hidden = true;
+    if (!startup || playback.output) return;
 
     playback.startAt = Math.max(context.currentTime, availableAt);
     playback.output = context.createGain();
@@ -146,6 +150,10 @@
     availableAt = Math.max(availableAt, stopAt);
   }
 
+  function playWhenReady(playback) {
+    startAudio(playback).catch(error => console.warn('Could not play lamp audio.', error));
+  }
+
   if (window.requestIdleCallback) {
     window.requestIdleCallback(prepareContext);
   } else {
@@ -159,16 +167,28 @@
     if (event.pointerType === 'mouse') unlockFromGesture();
   });
   cord.addEventListener('touchend', unlockFromGesture, { passive: true });
+  enableSound.addEventListener('click', () => {
+    if (!lampPlayback) return;
+    unlockFromGesture();
+    playWhenReady(lampPlayback);
+  });
   window.addEventListener('lampchange', ({ detail: lit }) => {
     const previous = lampPlayback;
     const next = lit ? { sources: new Set(), output: null, startAt: Infinity } : null;
     lampPlayback = next;
+    clearTimeout(soundPrompt);
+    enableSound.hidden = true;
+    if (next) {
+      soundPrompt = setTimeout(() => {
+        if (lampPlayback === next && context?.state !== 'running') enableSound.hidden = false;
+      }, 500);
+    }
 
     // Let the theme update paint before starting or stopping the audio graph.
     requestAnimationFrame(() => setTimeout(() => {
       if (previous) stopAudio(previous);
       if (next && next === lampPlayback) {
-        startAudio(next).catch(error => console.warn('Could not play lamp audio.', error));
+        playWhenReady(next);
       }
     }, 0));
   });
