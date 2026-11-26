@@ -152,6 +152,7 @@ function toggleLight() {
     overwrite: true
   });
   }
+  window.dispatchEvent(new CustomEvent('lampchange', { detail: currentTheme }));
 }
 
 
