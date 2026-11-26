@@ -41,7 +41,7 @@ const MAX_POINTER_DOWN = 26;    // how far the user's pointer can tug down
 const MAX_POINTER_SIDE = 105;    // horizontal travel: wider than V4
 const MAX_CHAIN_DOWN = 25;      // slight visual extension (previously 5)
 const MAX_CHAIN_SIDE = 27;      // actual horizontal position of the knob
-const ACTIVATE_AT = 19;
+const ACTIVATE_AT_PX = 23;       // Downward drag distance in CSS pixels
 const PULLS_PER_FLICKER = 3;
 
 const state = { down: 0, side: 0, swing: 0 };
@@ -231,21 +231,22 @@ hit.addEventListener('pointerdown', event => {
   if (activePointer !== null) return;
   event.preventDefault();
   activePointer = event.pointerId;
-  start = svgPoint(event);
+  const { x, y } = svgPoint(event);
+  start = { x, y, clientY: event.clientY };
   gsap.killTweensOf(state);
   releaseTween?.kill();
   releaseTween = null;
   hit.setPointerCapture(event.pointerId);
   hit.classList.add('dragging');
 });
-hit.addEventListener('pointermove', event => {
+window.addEventListener('pointermove', event => {
   if (activePointer !== event.pointerId) return;
   const now = svgPoint(event);
   pullTo(now.y - start.y, now.x - start.x);
 });
 function finish(event, cancelled = false) {
-  if (activePointer !== event.pointerId) return;
-  const shouldToggle = !cancelled && state.down >= ACTIVATE_AT;
+  if (activePointer === null || (event && activePointer !== event.pointerId)) return;
+  const shouldToggle = !cancelled && event.clientY - start.clientY >= ACTIVATE_AT_PX;
   activePointer = null;
   hit.classList.remove('dragging');
   if (shouldToggle) {
@@ -258,11 +259,10 @@ function finish(event, cancelled = false) {
   }
   release();
 }
-hit.addEventListener('pointerup', event => finish(event));
-hit.addEventListener('pointercancel', event => finish(event, true));
-hit.addEventListener('lostpointercapture', event => {
-  if (activePointer === event.pointerId) finish(event, true);
-});
+// The browser can lose SVG pointer capture before the user releases the cord.
+window.addEventListener('pointerup', event => finish(event));
+window.addEventListener('pointercancel', event => finish(event, true));
+window.addEventListener('blur', () => finish(null, true));
 button.addEventListener('click', () => {
   releaseTween?.kill();
   releaseTween = null;
